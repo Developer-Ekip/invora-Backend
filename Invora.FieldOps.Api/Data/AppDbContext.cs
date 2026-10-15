@@ -1,3 +1,4 @@
+//EF Core üzerinden veritabanı işlemlerini yönetir
 using Microsoft.EntityFrameworkCore;
 using Invora.FieldOps.Api.Models;
 
@@ -13,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<Company> Companies { get; set; } //companies tablosu
 
     public DbSet<Site> Sites { get; set; } //site tablosu
+
+    public DbSet<Visit> Visits { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
