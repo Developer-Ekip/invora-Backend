@@ -1,8 +1,8 @@
-using Invora.FieldOps.Api.DTOs;
+
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Invora.FieldOps.Api.Data;
+using Invora.FieldOps.Api.DTOs;
 using Invora.FieldOps.Api.Models;
+using Invora.FieldOps.Api.Services;
 
 namespace Invora.FieldOps.Api.Controllers;
 
@@ -10,29 +10,27 @@ namespace Invora.FieldOps.Api.Controllers;
 [Route("api/[controller]")]
 public class VisitsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IVisitService _visitService;
 
-    public VisitsController(AppDbContext context)
+    public VisitsController(IVisitService visitService)
     {
-        _context = context;
+        _visitService = visitService;
     }
 
+    // GET: Get all visits
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Visit>>> GetAll()
     {
-        var visits = await _context.Visits
-            .AsNoTracking()
-            .ToListAsync();
+        var visits = await _visitService.GetAllAsync();
 
         return Ok(visits);
     }
 
+    // GET: Get a visit by ID
     [HttpGet("{id}")]
     public async Task<ActionResult<Visit>> GetById(int id)
     {
-        var visit = await _context.Visits
-            .AsNoTracking()
-            .FirstOrDefaultAsync(v => v.Id == id);
+        var visit = await _visitService.GetByIdAsync(id);
 
         if (visit == null)
             return NotFound();
@@ -40,76 +38,43 @@ public class VisitsController : ControllerBase
         return Ok(visit);
     }
 
-
-[HttpPost]
-public async Task<ActionResult<Visit>> Create(CreateVisitDto dto)
-{
-    // AnyAsync(): Ziyaretin bağlanacağı Site var mı?
-    var siteExists = await _context.Sites
-        .AnyAsync(s => s.Id == dto.SiteId);
-
-    if (!siteExists)
-        return BadRequest("Site does not exist.");
-
-    // ID'yi veritabanı oluşturacak.
-    var visit = new Visit
+    // POST: Create a new visit
+    [HttpPost]
+    public async Task<ActionResult<Visit>> Create(CreateVisitDto dto)
     {
-        SiteId = dto.SiteId,
-        VisitDate = dto.VisitDate,
-        Status = dto.Status
-    };
+        var visit = await _visitService.CreateAsync(dto);
 
-    // Yeni ziyareti kaydet.
-    _context.Visits.Add(visit);
-    await _context.SaveChangesAsync(); //PostgreSQL'e kaydediyor
+        if (visit == null)
+            return BadRequest("Site does not exist.");
 
-    return CreatedAtAction(
-        nameof(GetById),
-        new { id = visit.Id },
-        visit
-    );
-}
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = visit.Id },
+            visit
+        );
+    }
 
+    // PUT: Update an existing visit
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, UpdateVisitDto updatedVisit)
+    {
+        var updated = await _visitService.UpdateAsync(id, updatedVisit);
 
+        if (!updated)
+            return BadRequest("Visit does not exist or Site is invalid.");
 
-[HttpPut("{id}")]
-public async Task<IActionResult> Update(int id, UpdateVisitDto updatedVisit)
-{
-    var visit = await _context.Visits.FindAsync(id);
+        return NoContent();
+    }
 
-    if (visit == null)
-        return NotFound();
+    // DELETE: Delete a visit
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var deleted = await _visitService.DeleteAsync(id);
 
-    var siteExists = await _context.Sites
-        .AnyAsync(s => s.Id == updatedVisit.SiteId);
+        if (!deleted)
+            return NotFound();
 
-    if (!siteExists)
-        return BadRequest("Site does not exist.");
-
-    visit.SiteId = updatedVisit.SiteId;
-    visit.VisitDate = updatedVisit.VisitDate;
-    visit.Status = updatedVisit.Status;
-
-    await _context.SaveChangesAsync();
-
-    return NoContent();
-}
-
-
-[HttpDelete("{id}")]
-public async Task<IActionResult> Delete(int id)
-{
-    var visit = await _context.Visits.FindAsync(id);
-
-    if (visit == null)
-        return NotFound();
-
-    _context.Visits.Remove(visit);
-
-    await _context.SaveChangesAsync();
-
-    return NoContent();
-}
-
-
+        return NoContent();
+    }
 }
