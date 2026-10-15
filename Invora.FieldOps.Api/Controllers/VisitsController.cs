@@ -1,3 +1,4 @@
+using Invora.FieldOps.Api.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Invora.FieldOps.Api.Data;
@@ -39,19 +40,24 @@ public class VisitsController : ControllerBase
         return Ok(visit);
     }
 
+
 [HttpPost]
-public async Task<ActionResult<Visit>> Create(Visit visit)
+public async Task<ActionResult<Visit>> Create(CreateVisitDto dto)
 {
     // AnyAsync(): Ziyaretin bağlanacağı Site var mı?
     var siteExists = await _context.Sites
-        .AnyAsync(s => s.Id == visit.SiteId);
+        .AnyAsync(s => s.Id == dto.SiteId);
 
     if (!siteExists)
         return BadRequest("Site does not exist.");
 
     // ID'yi veritabanı oluşturacak.
-    visit.Id = 0;
-    visit.Site = null;
+    var visit = new Visit
+    {
+        SiteId = dto.SiteId,
+        VisitDate = dto.VisitDate,
+        Status = dto.Status
+    };
 
     // Yeni ziyareti kaydet.
     _context.Visits.Add(visit);
@@ -64,13 +70,15 @@ public async Task<ActionResult<Visit>> Create(Visit visit)
     );
 }
 
+
+
 [HttpPut("{id}")]
-public async Task<IActionResult> Update(int id, Visit updatedVisit)
+public async Task<IActionResult> Update(int id, UpdateVisitDto updatedVisit)
 {
-    var visit = await _context.Visits.FindAsync(id); //FindAsync: id si 1 olan ziyareti buluyor
+    var visit = await _context.Visits.FindAsync(id);
 
     if (visit == null)
-        return NotFound(); //error 404
+        return NotFound();
 
     var siteExists = await _context.Sites
         .AnyAsync(s => s.Id == updatedVisit.SiteId);
@@ -84,8 +92,9 @@ public async Task<IActionResult> Update(int id, Visit updatedVisit)
 
     await _context.SaveChangesAsync();
 
-    return NoContent(); //204 
+    return NoContent();
 }
+
 
 [HttpDelete("{id}")]
 public async Task<IActionResult> Delete(int id)

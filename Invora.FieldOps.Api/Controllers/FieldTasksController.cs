@@ -1,3 +1,4 @@
+using Invora.FieldOps.Api.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Invora.FieldOps.Api.Data;
@@ -49,27 +50,27 @@ public class FieldTasksController : ControllerBase
         return Ok(task);
     }
 
-    // POST: api/fieldtasks
-    // Creates a new task for an existing visit
+   
+    // POST: Create a task linked to an existing visit
     [HttpPost]
-    public async Task<ActionResult<FieldTask>> Create(FieldTask task)
+    public async Task<ActionResult<FieldTask>> Create(CreateFieldTaskDto dto)
     {
-        // Checks whether the related visit exists
+        // Validate the related visit
         var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == task.VisitId);
+            .AnyAsync(v => v.Id == dto.VisitId);
 
-        // Prevents creating tasks for non-existing visits
         if (!visitExists)
             return BadRequest("Visit does not exist.");
 
-        // Ensures the database generates the task ID
-        task.Id = 0;
+        var task = new FieldTask
+        {
+            VisitId = dto.VisitId,
+            Title = dto.Title,
+            Description = dto.Description,
+            Status = dto.Status
+        };
 
-        task.Visit = null;
-
-        // Adds the new task to the database context.
         _context.FieldTasks.Add(task);
-
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(
@@ -79,26 +80,23 @@ public class FieldTasksController : ControllerBase
         );
     }
 
-    // PUT: api/fieldtasks/1
-    // Updates an existing task
+    
+    // PUT: Update an existing task
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, FieldTask updatedTask)
+    public async Task<IActionResult> Update(int id, UpdateFieldTaskDto updatedTask)
     {
-        // Finds the task by its ID
         var task = await _context.FieldTasks.FindAsync(id);
 
-        // Returns HTTP 404 if the task does not exist
         if (task == null)
             return NotFound();
 
-        // Validates the related Visit before updating
+        // Validate the related visit
         var visitExists = await _context.Visits
             .AnyAsync(v => v.Id == updatedTask.VisitId);
 
         if (!visitExists)
             return BadRequest("Visit does not exist.");
 
-        // Updates the task properties
         task.VisitId = updatedTask.VisitId;
         task.Title = updatedTask.Title;
         task.Description = updatedTask.Description;
@@ -108,6 +106,7 @@ public class FieldTasksController : ControllerBase
 
         return NoContent();
     }
+
 
     // DELETE: api/fieldtasks/1
     // Deletes an existing task by its ID

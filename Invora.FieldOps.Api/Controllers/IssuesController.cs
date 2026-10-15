@@ -1,4 +1,4 @@
-
+using Invora.FieldOps.Api.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Invora.FieldOps.Api.Data;
@@ -42,19 +42,25 @@ public class IssuesController : ControllerBase
         return Ok(issue);
     }
 
+
     // POST: Create an issue linked to an existing visit
     [HttpPost]
-    public async Task<ActionResult<Issue>> Create(Issue issue)
+    public async Task<ActionResult<Issue>> Create(CreateIssueDto dto)
     {
         // Validate the related visit
         var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == issue.VisitId);
+            .AnyAsync(v => v.Id == dto.VisitId);
 
         if (!visitExists)
             return BadRequest("Visit does not exist.");
 
-        issue.Id = 0;
-        issue.Visit = null;
+        var issue = new Issue
+        {
+            VisitId = dto.VisitId,
+            Title = dto.Title,
+            Description = dto.Description,
+            Status = dto.Status
+        };
 
         _context.Issues.Add(issue);
         await _context.SaveChangesAsync();
@@ -66,9 +72,10 @@ public class IssuesController : ControllerBase
         );
     }
 
+
     // PUT: Update an existing issue
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Issue updatedIssue)
+    public async Task<IActionResult> Update(int id, UpdateIssueDto updatedIssue)
     {
         var issue = await _context.Issues.FindAsync(id);
 
@@ -91,6 +98,7 @@ public class IssuesController : ControllerBase
 
         return NoContent();
     }
+
 
     // DELETE: Remove an issue by ID
     [HttpDelete("{id}")]
