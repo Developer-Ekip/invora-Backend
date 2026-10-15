@@ -101,6 +101,6 @@ public class SitesController : ControllerBase
         _context.Sites.Remove(site);
         await _context.SaveChangesAsync();
 
-        return NoContent();
+        return NoContent(); //http 204 yanitini olusturur
     }
 }
