@@ -1,8 +1,8 @@
-using Invora.FieldOps.Api.DTOs;
+
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Invora.FieldOps.Api.Data;
+using Invora.FieldOps.Api.DTOs;
 using Invora.FieldOps.Api.Models;
+using Invora.FieldOps.Api.Services;
 
 namespace Invora.FieldOps.Api.Controllers;
 
@@ -10,31 +10,27 @@ namespace Invora.FieldOps.Api.Controllers;
 [Route("api/[controller]")]
 public class IssuesController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IIssueService _issueService;
 
-    public IssuesController(AppDbContext context)
+    public IssuesController(IIssueService issueService)
     {
-        _context = context;
+        _issueService = issueService;
     }
 
-    // GET: Retrieve all issues
+    // GET: Get all issues
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Issue>>> GetAll()
     {
-        var issues = await _context.Issues
-            .AsNoTracking()
-            .ToListAsync();
+        var issues = await _issueService.GetAllAsync();
 
         return Ok(issues);
     }
 
-    // GET: Retrieve an issue by ID
+    // GET: Get an issue by ID
     [HttpGet("{id}")]
     public async Task<ActionResult<Issue>> GetById(int id)
     {
-        var issue = await _context.Issues
-            .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.Id == id);
+        var issue = await _issueService.GetByIdAsync(id);
 
         if (issue == null)
             return NotFound();
@@ -42,28 +38,14 @@ public class IssuesController : ControllerBase
         return Ok(issue);
     }
 
-
     // POST: Create an issue linked to an existing visit
     [HttpPost]
     public async Task<ActionResult<Issue>> Create(CreateIssueDto dto)
     {
-        // Validate the related visit
-        var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == dto.VisitId);
+        var issue = await _issueService.CreateAsync(dto);
 
-        if (!visitExists)
+        if (issue == null)
             return BadRequest("Visit does not exist.");
-
-        var issue = new Issue
-        {
-            VisitId = dto.VisitId,
-            Title = dto.Title,
-            Description = dto.Description,
-            Status = dto.Status
-        };
-
-        _context.Issues.Add(issue);
-        await _context.SaveChangesAsync();
 
         return CreatedAtAction(
             nameof(GetById),
@@ -72,45 +54,26 @@ public class IssuesController : ControllerBase
         );
     }
 
-
     // PUT: Update an existing issue
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateIssueDto updatedIssue)
     {
-        var issue = await _context.Issues.FindAsync(id);
+        var updated = await _issueService.UpdateAsync(id, updatedIssue);
 
-        if (issue == null)
-            return NotFound();
-
-        // Validate the related visit
-        var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == updatedIssue.VisitId);
-
-        if (!visitExists)
-            return BadRequest("Visit does not exist.");
-
-        issue.VisitId = updatedIssue.VisitId;
-        issue.Title = updatedIssue.Title;
-        issue.Description = updatedIssue.Description;
-        issue.Status = updatedIssue.Status;
-
-        await _context.SaveChangesAsync();
+        if (!updated)
+            return BadRequest("Issue does not exist or Visit is invalid.");
 
         return NoContent();
     }
 
-
-    // DELETE: Remove an issue by ID
+    // DELETE: Delete an issue
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var issue = await _context.Issues.FindAsync(id);
+        var deleted = await _issueService.DeleteAsync(id);
 
-        if (issue == null)
+        if (!deleted)
             return NotFound();
-
-        _context.Issues.Remove(issue);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }

@@ -7,6 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddScoped<IVisitService, VisitService>(); //.netin otom. visitservice nesnesini olusturup ona verir
+builder.Services.AddScoped<IFieldTaskService, FieldTaskService>();
+builder.Services.AddScoped<IIssueService, IssueService>();
 
 // Configure Entity Framework Core with PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>

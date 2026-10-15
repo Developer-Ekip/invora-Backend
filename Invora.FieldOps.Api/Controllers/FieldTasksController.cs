@@ -1,77 +1,51 @@
-using Invora.FieldOps.Api.DTOs;
+
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Invora.FieldOps.Api.Data;
+using Invora.FieldOps.Api.DTOs;
 using Invora.FieldOps.Api.Models;
+using Invora.FieldOps.Api.Services;
 
 namespace Invora.FieldOps.Api.Controllers;
 
 [ApiController]
-
 [Route("api/[controller]")]
 public class FieldTasksController : ControllerBase
 {
-    // Database context used to access the database.
-    private readonly AppDbContext _context;
+    private readonly IFieldTaskService _fieldTaskService;
 
-    // Injects the database context using Dependency Injection.
-    public FieldTasksController(AppDbContext context)
+    public FieldTasksController(IFieldTaskService fieldTaskService)
     {
-        _context = context;
+        _fieldTaskService = fieldTaskService;
     }
 
-    // GET: api/fieldtasks
-    // Retrieves all tasks from the database.
+    // GET: Get all tasks
     [HttpGet]
     public async Task<ActionResult<IEnumerable<FieldTask>>> GetAll()
     {
-        // AsNoTracking improves performance for read-only queries.
-        var tasks = await _context.FieldTasks
-            .AsNoTracking()
-            .ToListAsync();
+        var tasks = await _fieldTaskService.GetAllAsync();
 
         return Ok(tasks);
     }
 
-    // GET: api/fieldtasks/1
-    // Retrieves a specific task by its ID.
+    // GET: Get a task by ID
     [HttpGet("{id}")]
     public async Task<ActionResult<FieldTask>> GetById(int id)
     {
-        var task = await _context.FieldTasks
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var task = await _fieldTaskService.GetByIdAsync(id);
 
-        // HTTP 404 
         if (task == null)
             return NotFound();
 
-        //HTTP 200
         return Ok(task);
     }
 
-   
     // POST: Create a task linked to an existing visit
     [HttpPost]
     public async Task<ActionResult<FieldTask>> Create(CreateFieldTaskDto dto)
     {
-        // Validate the related visit
-        var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == dto.VisitId);
+        var task = await _fieldTaskService.CreateAsync(dto);
 
-        if (!visitExists)
+        if (task == null)
             return BadRequest("Visit does not exist.");
-
-        var task = new FieldTask
-        {
-            VisitId = dto.VisitId,
-            Title = dto.Title,
-            Description = dto.Description,
-            Status = dto.Status
-        };
-
-        _context.FieldTasks.Add(task);
-        await _context.SaveChangesAsync();
 
         return CreatedAtAction(
             nameof(GetById),
@@ -80,50 +54,26 @@ public class FieldTasksController : ControllerBase
         );
     }
 
-    
     // PUT: Update an existing task
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, UpdateFieldTaskDto updatedTask)
     {
-        var task = await _context.FieldTasks.FindAsync(id);
+        var updated = await _fieldTaskService.UpdateAsync(id, updatedTask);
 
-        if (task == null)
-            return NotFound();
-
-        // Validate the related visit
-        var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == updatedTask.VisitId);
-
-        if (!visitExists)
-            return BadRequest("Visit does not exist.");
-
-        task.VisitId = updatedTask.VisitId;
-        task.Title = updatedTask.Title;
-        task.Description = updatedTask.Description;
-        task.Status = updatedTask.Status;
-
-        await _context.SaveChangesAsync();
+        if (!updated)
+            return BadRequest("Task does not exist or Visit is invalid.");
 
         return NoContent();
     }
 
-
-    // DELETE: api/fieldtasks/1
-    // Deletes an existing task by its ID
+    // DELETE: Delete a task
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        // Finds the task to delete
-        var task = await _context.FieldTasks.FindAsync(id);
+        var deleted = await _fieldTaskService.DeleteAsync(id);
 
-        if (task == null)
+        if (!deleted)
             return NotFound();
-
-        // Marks the task for deletion
-        _context.FieldTasks.Remove(task);
-
-        // Permanently deletes the task from the database
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
