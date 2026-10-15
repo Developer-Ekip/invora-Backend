@@ -17,6 +17,10 @@ public class AppDbContext : DbContext
 
     public DbSet<Visit> Visits { get; set; }
 
+public DbSet<FieldTask> FieldTasks { get; set; }
+public DbSet<Issue> Issues { get; set; }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

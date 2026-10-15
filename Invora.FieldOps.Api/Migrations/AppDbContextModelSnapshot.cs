@@ -39,6 +39,66 @@ namespace Invora.FieldOps.Api.Migrations
                     b.ToTable("Companies");
                 });
 
+            modelBuilder.Entity("Invora.FieldOps.Api.Models.FieldTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("VisitId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VisitId");
+
+                    b.ToTable("FieldTasks");
+                });
+
+            modelBuilder.Entity("Invora.FieldOps.Api.Models.Issue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("VisitId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VisitId");
+
+                    b.ToTable("Issues");
+                });
+
             modelBuilder.Entity("Invora.FieldOps.Api.Models.Site", b =>
                 {
                     b.Property<int>("Id")
@@ -84,6 +144,28 @@ namespace Invora.FieldOps.Api.Migrations
                     b.HasIndex("SiteId");
 
                     b.ToTable("Visits");
+                });
+
+            modelBuilder.Entity("Invora.FieldOps.Api.Models.FieldTask", b =>
+                {
+                    b.HasOne("Invora.FieldOps.Api.Models.Visit", "Visit")
+                        .WithMany()
+                        .HasForeignKey("VisitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Visit");
+                });
+
+            modelBuilder.Entity("Invora.FieldOps.Api.Models.Issue", b =>
+                {
+                    b.HasOne("Invora.FieldOps.Api.Models.Visit", "Visit")
+                        .WithMany()
+                        .HasForeignKey("VisitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Visit");
                 });
 
             modelBuilder.Entity("Invora.FieldOps.Api.Models.Site", b =>
