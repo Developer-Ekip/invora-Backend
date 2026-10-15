@@ -17,9 +17,9 @@ public class WeatherForecastController : ControllerBase
         return Enumerable.Range(1, 5).Select(index => new WeatherForecast
         {
             Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            TemperatureC = Random.Shared.Next(-20, 55),
+            TemperatureC = Random.Shared.Next(-20, 55), //Generiert eine zufällige Temperatur zwischen -20 und 54
             Summary = Summaries[Random.Shared.Next(Summaries.Length)]
         })
-        .ToArray();
+        .ToArray(); //wandelt die erzeugten Datensätze in ein Array um
     }
 }

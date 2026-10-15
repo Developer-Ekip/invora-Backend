@@ -1,28 +1,42 @@
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Invora.FieldOps.Api.Data;
 using Invora.FieldOps.Api.Models;
 
 namespace Invora.FieldOps.Api.Controllers;
 
-//controllerin tanimlanmasi
-[ApiController] //enables api-specific behaviors
+// Controllerin tanimlanmasi
+[ApiController] // Enables API-specific behaviors
 [Route("api/[controller]")]
 public class CompaniesController : ControllerBase
 {
-    private static readonly List<Company> Companies = new(); //reodonly: prevents reassigning the list reference
-    private static int nextId = 1;
+    private readonly AppDbContext _context;
 
-//sirketleri listeleme
-    [HttpGet]
-    public ActionResult<IEnumerable<Company>> GetAll()
+    // Dependency Injection
+    public CompaniesController(AppDbContext context)
     {
-        return Ok(Companies);
+        _context = context;
     }
 
-    [HttpGet("{id}")]
-    public ActionResult<Company> GetById(int id)
+    // Sirketleri listeleme
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Company>>> GetAll() //async ve await: islemleri asenkron yürütüyor
     {
-        var company = Companies.FirstOrDefault(c => c.Id == id);
+        var companies = await _context.Companies
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Ok(companies);
+    }
+
+    // ID'ye gore sirket bulma
+    [HttpGet("{id}")]
+    public async Task<ActionResult<Company>> GetById(int id)
+    {
+        var company = await _context.Companies
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         if (company == null)
             return NotFound();
@@ -30,11 +44,16 @@ public class CompaniesController : ControllerBase
         return Ok(company);
     }
 
-    [HttpPost] //yeni sirket olusturma
-    public ActionResult<Company> Create(Company company)
+    // Yeni sirket olusturma
+    [HttpPost]
+    public async Task<ActionResult<Company>> Create(Company company)
     {
-        company.Id = nextId++;
-        Companies.Add(company);
+        company.Id = 0; // ID'yi PostgreSQL olusturacak
+        company.Sites = new List<Site>();
+
+        _context.Companies.Add(company);
+
+        await _context.SaveChangesAsync();
 
         return CreatedAtAction(
             nameof(GetById),
@@ -43,28 +62,34 @@ public class CompaniesController : ControllerBase
         );
     }
 
-    [HttpPut("{id}")] //sirket güncelleme
-    public IActionResult Update(int id, Company updatedCompany)
+    // Sirket guncelleme
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, Company updatedCompany)
     {
-        var company = Companies.FirstOrDefault(c => c.Id == id);
+        var company = await _context.Companies.FindAsync(id);
 
         if (company == null)
             return NotFound();
 
         company.Name = updatedCompany.Name;
 
+        await _context.SaveChangesAsync();
+
         return NoContent();
     }
 
+    // Sirket silme
     [HttpDelete("{id}")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var company = Companies.FirstOrDefault(c => c.Id == id);
+        var company = await _context.Companies.FindAsync(id);
 
         if (company == null)
             return NotFound();
 
-        Companies.Remove(company);
+        _context.Companies.Remove(company);
+
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }

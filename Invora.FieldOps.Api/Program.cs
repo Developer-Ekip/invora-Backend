@@ -1,9 +1,20 @@
+
+using Microsoft.EntityFrameworkCore;
+using Invora.FieldOps.Api.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+// Configure Entity Framework Core with PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql( //UseNpgsql: PostgreSQL kullanacağımızı belirtir
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
+);
+
+// Learn more about configuring OpenAPI
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
