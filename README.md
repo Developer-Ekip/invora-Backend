@@ -110,9 +110,16 @@ python3 tests/smoke.py
 
 Testler JWT, Admin/FieldUser rolleri, iki farklı kullanıcının veri izolasyonu, ziyaret atama/değiştirme, CRUD, doğrulama ve Swagger'ı kontrol eder.
 
+## Teslim ve kodu anlama
+
+- `TEKNIK_ANLATIM.md`: Kod akışı, örnek gösterim ve teknik değerlendirme hazırlığı.
+- `TESLIM_KONTROLU.md`: Yapılan teknik kontroller ve sonuçları.
+- `DOSYA_DEGISIKLIKLERI.md`: Yeni ve değiştirilen dosyaların tam listesi.
+- Bu bilgisayardaki geliştirme hesapları: `.local/GIRIS_BILGILERI.txt` (GitHub dışında).
+
 ## Git akışı
 
-Önceki çalışmalar ayrı `feature/*` branch'lerinde korunmuştur. JWT başlangıcı `feature/jwt-auth`, tamamlanan çalışma `feature/complete-fieldops` branch'indedir. GitHub'ın varsayılan branch'i eski başlangıç kodunu gösteriyorsa branch seçicisinden `feature/complete-fieldops` seçin.
+Önceki çalışmalar ayrı `feature/*` branch'lerinde korunmuştur. JWT başlangıcı `feature/jwt-auth`, tamamlanan çalışma `feature/complete-fieldops` branch'indedir. Teslim PR'ı: https://github.com/Developer-Ekip/Demo/pull/1. Birleştirme durumu PR sayfasında görülebilir.
 
 ```sh
 git switch feature/complete-fieldops
