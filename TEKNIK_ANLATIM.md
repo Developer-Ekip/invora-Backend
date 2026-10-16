@@ -1,66 +1,169 @@
-# Projeyi açıklama rehberi
+# Invora FieldOps – Teknik Proje Notları
 
-Bu rehber kod incelemesinde akışı kendi cümlelerinle anlatabilmen için hazırlanmıştır. Kodun çalışması teknik olarak test edilmiştir; işverenin yapacağı görüşme ve değerlendirme ayrı bir süreçtir.
+Bu dosyada projede kullandığım temel yapıları ve API'nin nasıl çalıştığını özetledim. Kod incelemesi sırasında hem genel sistemi hem de neden bu yöntemleri kullandığımı anlatmak için hazırladığım notlar.
 
-## Projenin amacı
+## 1. Projenin amacı
 
-Bir müşteri firmasının sahalarını, bu sahalara planlanan ziyaretleri ve ziyaretteki görev/sorun kayıtlarını yönetiyoruz. Company birden fazla Site içerir. Visit bir Site'a bağlıdır; FieldTask ve Issue bir Visit'e bağlıdır. Visit ayrıca bir FieldUser'a atanabilir.
+Bu projede şirketlerin sahalarını ve bu sahalarda gerçekleştirilen ziyaretleri yönetebileceğimiz bir backend API geliştirdim.
 
-## Bir istek nasıl çalışır
+Sistemde beş temel yapı bulunuyor:
 
-Örnek: `POST /api/visits`.
+- **Company:** Müşteri firması
+- **Site:** Firmaya bağlı çalışma sahası
+- **Visit:** Bir sahada planlanan veya gerçekleştirilen ziyaret
+- **FieldTask:** Ziyaret sırasında yapılacak görev
+- **Issue:** Ziyarette tespit edilen sorun veya arıza
 
-1. Authentication middleware JWT'nin imzasını, süresini, issuer ve audience bilgisini doğrular.
-2. Controller üzerindeki Authorize, ziyaret oluşturma için Admin rolünü kontrol eder.
-3. ApiController, CreateVisitDto üzerindeki doğrulama kurallarını kontrol eder. Hatalı giriş controller çalışmadan 400 dönebilir.
-4. VisitsController, IVisitService üzerinden VisitService'i çağırır.
-5. VisitService, Site'ın ve atanacak FieldUser'ın varlığını kontrol eder.
-6. AppDbContext ve EF Core yeni kaydı PostgreSQL'e yazar.
-7. Controller response DTO'sunu ve kaydın adresiyle birlikte 201 Created yanıtını döndürür.
+Bir Company'nin birden fazla Site'ı olabilir. Her Visit bir Site'a bağlıdır. Görevler ve sorunlar da ilgili Visit üzerinden tutulur.
 
-Dependency injection, constructor'da istenen servisi otomatik sağlar. Scoped servis her HTTP isteği için ayrı oluşturulur. AppDbContext de bu yaşam süresini kullanır.
+Ayrıca ziyaretleri belirli bir FieldUser'a atayabiliyoruz.
 
-## DTO neden var
+## 2. API'de bir istek nasıl işleniyor?
 
-Entity veritabanı modelidir. DTO API'nin alacağı ve döndüreceği alanları belirler. İstemci EF ilişkilerini göndermek zorunda kalmaz; response navigation property veya parola hash'i içermez. Eşleme Responses.cs içindeki kısa ToDto metotlarıyla yapılır.
+Örneğin `POST /api/visits` isteğiyle yeni bir ziyaret oluşturmak istediğimizi düşünelim.
 
-## Authentication ve authorization
+Öncelikle sistem kullanıcının JWT token'ını kontrol ediyor. Token geçerliyse bu işlemi yapmaya yetkisi olup olmadığına bakılıyor. Yeni ziyaret oluşturma işlemi yalnızca Admin'e açık.
 
-Authentication kim olduğunu doğrular. Login doğruysa JwtTokenService kullanıcı ID'si, kullanıcı adı ve rolü içeren, bir saat geçerli JWT üretir. Parola token'a yazılmaz. Parola veritabanında PasswordHasher ile hash'lenir.
+Sonrasında gönderilen bilgiler DTO üzerinden doğrulanıyor. Örneğin zorunlu bir alan eksikse sistem `400 Bad Request` döndürebiliyor.
 
-Authorization ne yapabileceğini belirler. Admin firma/saha/ziyaret oluşturur ve ziyaret atar. Register her zaman FieldUser oluşturur; istemci kendisine Admin rolü veremez.
+İstek `VisitsController` tarafından alınıyor ve `IVisitService` üzerinden `VisitService`'e aktarılıyor. Asıl kontroller burada yapılıyor. Sahanın ve varsa atanacak kullanıcının geçerli olup olmadığı kontrol edildikten sonra EF Core aracılığıyla kayıt PostgreSQL'e yazılıyor.
 
-CurrentUser, doğrulanmış token içindeki kullanıcı ID'sini ve rolünü okur. VisitService.Visible sorgusu Admin'e tüm ziyaretleri, FieldUser'a AssignedUserId kendi ID'si olan ziyaretleri döndürür. FieldTaskService ve IssueService aynı kontrolü bağlı Visit üzerinden yapar. Böylece başka bir kaydın ID'sini tahmin etmek yetki vermez.
+İşlem başarılıysa API yeni ziyaretin bilgilerini `201 Created` yanıtıyla geri gönderiyor.
 
-FieldUser yalnızca ziyaretin status alanını PATCH ile değiştirebilir. Site ve atanan kullanıcıyı değiştiren PUT yalnızca Admin'e açıktır.
+Burada Controller ile Service'i ayırmamızın nedeni, HTTP işlemleriyle iş mantığını birbirinden ayrı tutmak.
 
-## Async LINQ ve migration
+## 3. DTO ve Service yapısı
 
-LINQ sorguları filtreleri SQL'e dönüştürür; async çağrılar veritabanı yanıtını beklerken uygulama iş parçacığını bloklamaz. Liste sorgularında AsNoTracking, yalnızca okunan entity'lerin değişiklik takibini kapatır.
+Projede Entity ve DTO'ları ayrı kullandım.
 
-Migration, modelin veritabanı şemasına uygulanacak değişikliklerini tutar. Son migration Visits tablosuna AssignedUserId ekler, Users.Username için unique index oluşturur ve yabancı anahtar kurar. Eski ziyaretler null atamayla korunur; Admin onları atayabilir.
+**Entity**, veritabanında hangi bilgilerin tutulacağını tanımlıyor. **DTO** ise API üzerinden hangi bilgilerin alınacağını veya kullanıcıya gönderileceğini belirliyor.
 
-## Hatalar ve loglar
+Bu sayede veritabanı modelini doğrudan dışarı açmamış oluyoruz. Örneğin kullanıcı bilgileri dönerken `PasswordHash` gibi alanların response içinde yer almasını istemiyoruz.
 
-Doğrulama hataları 400, giriş hatası 401, rol yetersizliği 403, bulunamayan/erişilemeyen kayıt 404 döner. Görev/sorun PUT işlemlerinde bulunamayan kayıt veya geçersiz/erişilemeyen Visit için ortak 400 yanıtı kullanılır. Unique veya yabancı anahtar çakışması 409 olur. Beklenmedik hatalar ApiExceptionHandler tarafından 500 ProblemDetails'e çevrilir; iç hata detayları istemciye gönderilmez. JSON loglarında HTTP metodu, yol, durum kodu ve hata bilgisi bulunur.
+DTO dönüşümleri `Responses.cs` içindeki `ToDto` metotlarıyla yapılıyor.
 
-## Canlı gösterim sırası
+Service yapısını ise veri tabanı sorgularını ve iş kurallarını Controller'ın dışında tutmak için kullandım.
 
-1. API'yi README komutuyla çalıştır ve Swagger'ı aç.
-2. Admin ile login ol, token'ı Authorize alanına yapıştır.
-3. Örnek firma, saha ve ziyareti listele. Yerel giriş dosyasında örnek kayıt ID'leri var.
-4. İlk demo FieldUser ile giriş yapıp atanmış ziyareti göster.
-5. Ziyaretin durumunu PATCH ile değiştir, görev ve sorun kayıtlarını listele.
-6. İkinci demo FieldUser ile aynı ziyaret ID'sini iste; 404 dönmeli.
-7. FieldUser ile firma oluşturmayı dene; 403 dönmeli.
-8. Admin'e dönüp ziyaretin kullanıcı atamasını değiştir ve görünürlüğün değiştiğini göster.
+`Dependency Injection` sayesinde servisleri Controller içinde `new` ile oluşturmam gerekmiyor. İhtiyacım olan servis constructor üzerinden otomatik veriliyor.
 
-Yerel hesapların bilgileri `.local/GIRIS_BILGILERI.txt` dosyasında tutulur ve Git'e eklenmez.
+## 4. Kullanıcı girişi ve yetkilendirme
 
-## İnceleme soruları
+Projede JWT tabanlı bir giriş sistemi var.
 
-- Controller neden doğrudan her işlemi yapmıyor? İş kuralları ve sorgular service içinde tutuluyor; controller HTTP isteği ve yanıtıyla ilgileniyor.
-- Kullanıcı ID'si neden request'ten okunmuyor? Kimlik doğrulanmış JWT claim'inden alınıyor; istemcinin başka bir kullanıcı ID'si göndermesi yetki sağlamıyor.
-- JWT logout endpoint'i neden yok? Bu basit sürümde token bir saat sonra geçersiz olur; istemci çıkışta token'ı siler. Refresh token ve iptal listesi bu eğitim kapsamına eklenmedi.
-- Firma silinirse ne olur? EF ilişkilerinin cascade davranışı nedeniyle bağlı saha, ziyaret, görev ve sorunlar da silinir.
-- Migration tekil kullanıcı adı indeksinde hata verirse? Mevcut veritabanındaki tekrar eden kullanıcı adları düzeltilmelidir; unique kuralı kaldırılmamalıdır.
+Kullanıcı kayıt olurken şifresi düz metin olarak değil, `PasswordHasher` ile hash'lenerek veritabanına kaydediliyor.
+
+Login başarılı olduğunda `JwtTokenService` bir saat geçerli JWT oluşturuyor. Bu token kullanıcı ID'si, kullanıcı adı ve rol bilgilerini içeriyor.
+
+Burada iki kavramı ayırıyoruz:
+
+- **Authentication:** Kullanıcının kim olduğunu doğrulamak.
+- **Authorization:** Kullanıcının hangi işlemleri yapabileceğini belirlemek.
+
+Sistemde `Admin` ve `FieldUser` olmak üzere iki rol bulunuyor.
+
+Admin şirketleri, sahaları ve ziyaretleri yönetebiliyor. Ziyaretleri kullanıcılara atayabiliyor.
+
+FieldUser ise yalnızca kendisine atanmış ziyaretleri görebiliyor. Ayrıca bu ziyaretlerin durumunu `PATCH` isteğiyle güncelleyebiliyor.
+
+## 5. Kullanıcıların sadece kendi kayıtlarını görmesi
+
+Burası güvenlik açısından önemli.
+
+Sadece `[Authorize]` kullanmak yeterli değil. Çünkü giriş yapmış bir kullanıcının başka kullanıcıların ziyaretlerine erişmesini de engellememiz gerekiyor.
+
+Bunun için `CurrentUser` üzerinden JWT içindeki kullanıcı ID'sini alıyoruz.
+
+`VisitService.Visible` sorgusu kullanıcı rolüne göre farklı çalışıyor:
+
+- Admin bütün ziyaretleri görebiliyor.
+- FieldUser yalnızca `AssignedUserId` değeri kendi ID'siyle eşleşen ziyaretleri görebiliyor.
+
+Aynı mantık görev ve sorun kayıtları için de ilgili Visit üzerinden kontrol ediliyor.
+
+Böylece bir kullanıcı başka bir ziyaretin ID'sini bilse bile o kayda doğrudan erişemiyor.
+
+## 6. Entity Framework Core ve PostgreSQL
+
+Veritabanı tarafında PostgreSQL kullandım. C# koduyla veritabanı arasındaki iletişimi EF Core sağlıyor.
+
+`AppDbContext`, tablolarımızı ve aralarındaki ilişkileri yönetiyor.
+
+Veritabanı sorgularında LINQ kullandım. Örneğin bir kullanıcının ziyaretlerini filtrelerken yazdığım LINQ sorgusu EF Core tarafından SQL'e dönüştürülüyor.
+
+Asenkron metotları (`async/await`) veritabanı işlemlerini beklerken uygulamanın iş parçacığını gereksiz yere meşgul etmemek için kullandım.
+
+Sadece veri okuduğumuz bazı sorgularda `AsNoTracking()` bulunuyor. Böylece EF Core'un değişiklik takibi yapmasına gerek kalmıyor.
+
+### Migration
+
+Model üzerinde yaptığımız değişikliklerin veritabanına uygulanması için migration kullanıyoruz.
+
+Son değişikliklerde ziyaretlere `AssignedUserId` alanı eklendi. Böylece bir ziyaretin hangi kullanıcıya atandığını tutabiliyoruz.
+
+Ayrıca kullanıcı adlarının tekrar etmesini engellemek için `Users.Username` alanına unique index eklendi.
+
+## 7. Hata yönetimi
+
+API'de farklı durumlara göre uygun HTTP status code'ları dönmeye çalıştım.
+
+| HTTP kodu | Anlamı |
+|---|---|
+| `200 OK` | İstek başarılı |
+| `201 Created` | Yeni kayıt oluşturuldu |
+| `204 No Content` | İşlem başarılı, yanıt gövdesi yok |
+| `400 Bad Request` | Gönderilen veriler geçersiz |
+| `401 Unauthorized` | Geçerli giriş bilgisi yok |
+| `403 Forbidden` | Kullanıcının işlem için yetkisi yok |
+| `404 Not Found` | Kayıt bulunamadı veya kullanıcıya görünür değil |
+| `409 Conflict` | Veritabanı kısıtlamasıyla çakışma |
+| `500 Internal Server Error` | Beklenmeyen sunucu hatası |
+
+Beklenmeyen hatalar `ApiExceptionHandler` tarafından ele alınıyor. İç hata detayları doğrudan kullanıcıya gösterilmiyor.
+
+Loglar üzerinden hangi isteğin yapıldığını, sonucunu ve varsa hata bilgisini takip edebiliyoruz.
+
+## 8. Projeyi nasıl göstereceğim?
+
+Kod incelemesinde önce API'nin genel yapısını, ardından Swagger üzerinden birkaç örnek işlemi göstermek istiyorum.
+
+1. API'yi çalıştırıp Swagger'ı açmak.
+2. Admin hesabıyla giriş yapıp şirket, saha ve ziyaret kayıtlarını göstermek.
+3. Bir ziyaretin FieldUser'a atanmasını göstermek.
+4. FieldUser hesabıyla giriş yapıp yalnızca atanmış ziyaretlerin listelendiğini göstermek.
+5. Ziyaret durumunu `PATCH` ile güncellemek.
+6. Başka bir FieldUser'ın aynı ziyareti göremediğini göstermek.
+7. FieldUser'ın şirket oluşturma yetkisi olmadığını `403 Forbidden` yanıtıyla göstermek.
+
+Demo kullanıcı bilgileri yerel `.local/GIRIS_BILGILERI.txt` dosyasında tutuluyor. Bu dosya GitHub'a yüklenmiyor.
+
+## 9. Kod incelemesinde açıklayabilmem gereken noktalar
+
+**Controller ve Service neden ayrı?**
+
+Controller HTTP isteğini karşılıyor ve yanıtı döndürüyor. Service ise veritabanı sorgularını ve iş mantığını yönetiyor. Bu ayrım kodun bakımını ve test edilmesini kolaylaştırıyor.
+
+**Neden kullanıcı ID'sini request içinden almıyoruz?**
+
+Çünkü kullanıcı kendi isteğine başka bir kullanıcının ID'sini yazabilir. Bunun yerine doğrulanmış JWT içindeki ID'yi kullanıyoruz.
+
+**Neden JWT için Logout endpoint'i yok?**
+
+Bu sürümde token bir saat geçerli. Kullanıcı çıkış yaptığında istemci tarafında token siliniyor. Refresh token veya token iptal sistemi henüz eklenmedi.
+
+**Bir şirket silinirse ne olur?**
+
+Mevcut EF Core ilişki ayarlarına göre şirkete bağlı sahalar ve bunlarla ilişkili ziyaret, görev ve sorun kayıtları da silinebiliyor. Bu yüzden silme işlemleri yalnızca Admin'e açık.
+
+**Migration sırasında unique index hatası neden çıkabilir?**
+
+Veritabanında aynı kullanıcı adına sahip birden fazla kayıt varsa unique index oluşturulamaz. Böyle bir durumda tekrar eden kayıtların düzeltilmesi gerekir.
+
+---
+
+## Kısa özet
+
+Bu projede ASP.NET Core Web API ile bir saha operasyonları yönetim sisteminin backend tarafını geliştirdim. Veritabanı için PostgreSQL, veri erişimi için EF Core, kullanıcı girişi için JWT kullandım.
+
+Projede özellikle Controller–Service ayrımını, DTO kullanımını, Dependency Injection mantığını ve kullanıcıların yalnızca yetkili oldukları kayıtlara erişmesini sağlayan kontrolleri uyguladım.
+
+Temel amacım sadece CRUD endpoint'leri oluşturmak değil, bunları daha düzenli, anlaşılır ve güvenli bir backend yapısı içinde birleştirmekti.
