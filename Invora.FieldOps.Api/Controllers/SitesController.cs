@@ -1,3 +1,5 @@
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Invora.FieldOps.Api.Data;
@@ -7,6 +9,8 @@ namespace Invora.FieldOps.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+
 public class SitesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -41,7 +45,7 @@ public class SitesController : ControllerBase
 
         return Ok(site);
     }
-
+[Authorize(Roles = "Admin")]
     // POST: api/sites
     [HttpPost]
                                         //Yeni lokasyon oluşturur
@@ -65,7 +69,7 @@ public class SitesController : ControllerBase
             site
         );
     }
-
+[Authorize(Roles = "Admin")]
     // PUT: api/sites/1
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Site updatedSite)
@@ -88,7 +92,7 @@ public class SitesController : ControllerBase
 
         return NoContent();
     }
-
+[Authorize(Roles = "Admin")]
     // DELETE: api/sites/1
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)

@@ -1,4 +1,4 @@
-
+using Microsoft.AspNetCore.Authorization; 
 using Microsoft.AspNetCore.Mvc;
 using Invora.FieldOps.Api.DTOs;
 using Invora.FieldOps.Api.Models;
@@ -8,6 +8,8 @@ namespace Invora.FieldOps.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
+
 public class VisitsController : ControllerBase
 {
     private readonly IVisitService _visitService;

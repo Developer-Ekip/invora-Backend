@@ -11,14 +11,17 @@ public class AppDbContext : DbContext
     {
     }
 
+    //EF Core´a veritabaninda tablo olarak yönetme: 
     public DbSet<Company> Companies { get; set; } //companies tablosu
 
     public DbSet<Site> Sites { get; set; } //site tablosu
 
     public DbSet<Visit> Visits { get; set; }
 
-public DbSet<FieldTask> FieldTasks { get; set; }
-public DbSet<Issue> Issues { get; set; }
+    public DbSet<FieldTask> FieldTasks { get; set; }
+    public DbSet<Issue> Issues { get; set; }
+
+    public DbSet<User> Users { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,4 +1,4 @@
-
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Invora.FieldOps.Api.Data;
@@ -9,6 +9,8 @@ namespace Invora.FieldOps.Api.Controllers;
 // Controllerin tanimlanmasi
 [ApiController] // Enables API-specific behaviors
 [Route("api/[controller]")]
+[Authorize]
+
 public class CompaniesController : ControllerBase
 {
     private readonly AppDbContext _context;
@@ -45,6 +47,7 @@ public class CompaniesController : ControllerBase
     }
 
     // Yeni sirket olusturma
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<ActionResult<Company>> Create(Company company)
     {
@@ -63,6 +66,7 @@ public class CompaniesController : ControllerBase
     }
 
     // Sirket guncelleme
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Company updatedCompany)
     {
@@ -79,6 +83,7 @@ public class CompaniesController : ControllerBase
     }
 
     // Sirket silme
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
