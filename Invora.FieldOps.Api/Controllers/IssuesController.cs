@@ -8,7 +8,7 @@ namespace Invora.FieldOps.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "Admin,FieldUser")]
 
 public class IssuesController : ControllerBase
 {
@@ -21,38 +21,38 @@ public class IssuesController : ControllerBase
 
     // GET: Get all issues
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Issue>>> GetAll()
+    public async Task<ActionResult<IEnumerable<IssueResponseDto>>> GetAll()
     {
         var issues = await _issueService.GetAllAsync();
 
-        return Ok(issues);
+        return Ok(issues.Select(x => x.ToDto()));
     }
 
     // GET: Get an issue by ID
     [HttpGet("{id}")]
-    public async Task<ActionResult<Issue>> GetById(int id)
+    public async Task<ActionResult<IssueResponseDto>> GetById(int id)
     {
         var issue = await _issueService.GetByIdAsync(id);
 
         if (issue == null)
             return NotFound();
 
-        return Ok(issue);
+        return Ok(issue.ToDto());
     }
 
     // POST: Create an issue linked to an existing visit
     [HttpPost]
-    public async Task<ActionResult<Issue>> Create(CreateIssueDto dto)
+    public async Task<ActionResult<IssueResponseDto>> Create(CreateIssueDto dto)
     {
         var issue = await _issueService.CreateAsync(dto);
 
         if (issue == null)
-            return BadRequest("Visit does not exist.");
+            return Problem(statusCode: 400, title: "Invalid request", detail: "Visit does not exist.");
 
         return CreatedAtAction(
             nameof(GetById),
             new { id = issue.Id },
-            issue
+            issue.ToDto()
         );
     }
 
@@ -63,7 +63,7 @@ public class IssuesController : ControllerBase
         var updated = await _issueService.UpdateAsync(id, updatedIssue);
 
         if (!updated)
-            return BadRequest("Issue does not exist or Visit is invalid.");
+            return Problem(statusCode: 400, title: "Invalid request", detail: "Issue does not exist or Visit is invalid.");
 
         return NoContent();
     }

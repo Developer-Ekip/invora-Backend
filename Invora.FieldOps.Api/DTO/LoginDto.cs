@@ -11,5 +11,5 @@ public class LoginDto
     public string Password { get; set; } = string.Empty;
 }
 
-/* kullanici giris yapmak istediginde 
+/* kullanici giris yapmak istediginde
 API a username ve password bilgilerini gönderir */

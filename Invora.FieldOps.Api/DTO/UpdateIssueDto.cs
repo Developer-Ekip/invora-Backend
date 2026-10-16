@@ -16,6 +16,6 @@ public class UpdateIssueDto
     public string Description { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(50)]
+    [RegularExpression("^(Open|InProgress|Resolved)$")]
     public string Status { get; set; } = string.Empty;
 }

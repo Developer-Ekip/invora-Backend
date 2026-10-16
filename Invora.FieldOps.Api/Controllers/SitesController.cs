@@ -1,110 +1,29 @@
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Invora.FieldOps.Api.Data;
-using Invora.FieldOps.Api.Models;
-
+using Invora.FieldOps.Api.DTOs;
+using Invora.FieldOps.Api.Services;
 namespace Invora.FieldOps.Api.Controllers;
-
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-
-public class SitesController : ControllerBase
+[Authorize(Roles = "Admin,FieldUser")]
+public class SitesController(ISiteService service) : ControllerBase
 {
-    private readonly AppDbContext _context;
-
-    public SitesController(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    // GET: api/sites
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Site>>> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? search) => Ok((await service.GetAllAsync(search)).Select(x => x.ToDto()));
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id)
     {
-        var sites = await _context.Sites
-            .AsNoTracking()
-            .ToListAsync();
-
-        return Ok(sites);
+        var item = await service.GetByIdAsync(id);
+        return item == null ? NotFound() : Ok(item.ToDto());
     }
-
-    // GET: api/sites/1
-    [HttpGet("{id}")]
-                                         //Belirli bir lokasyonu getirir
-    public async Task<ActionResult<Site>> GetById(int id) 
+    [HttpPost, Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Create(SaveSiteDto dto)
     {
-        var site = await _context.Sites
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == id);
-
-        if (site == null)
-            return NotFound();
-
-        return Ok(site);
+        var item = await service.CreateAsync(dto);
+        return CreatedAtAction(nameof(GetById), new { id = item.Id }, item.ToDto());
     }
-[Authorize(Roles = "Admin")]
-    // POST: api/sites
-    [HttpPost]
-                                        //Yeni lokasyon oluşturur
-    public async Task<ActionResult<Site>> Create(Site site)
-    {
-        var companyExists = await _context.Companies
-            .AnyAsync(c => c.Id == site.CompanyId);
-
-        if (!companyExists)
-            return BadRequest("Company does not exist.");
-
-        site.Id = 0;
-        site.Company = null!;
-
-        _context.Sites.Add(site);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = site.Id },
-            site
-        );
-    }
-[Authorize(Roles = "Admin")]
-    // PUT: api/sites/1
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Site updatedSite)
-    {                               // lokasyon günceller
-        var site = await _context.Sites.FindAsync(id);
-
-        if (site == null)
-            return NotFound();
-
-        var companyExists = await _context.Companies
-            .AnyAsync(c => c.Id == updatedSite.CompanyId);
-
-        if (!companyExists)
-            return BadRequest("Company does not exist.");
-
-        site.Name = updatedSite.Name;
-        site.CompanyId = updatedSite.CompanyId;
-
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-[Authorize(Roles = "Admin")]
-    // DELETE: api/sites/1
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        var site = await _context.Sites.FindAsync(id);
-
-        if (site == null)
-            return NotFound();
-
-        _context.Sites.Remove(site);
-        await _context.SaveChangesAsync();
-
-        return NoContent(); //http 204 yanitini olusturur
-    }
+    [HttpPut("{id:int}"), Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(int id, SaveSiteDto dto) => await service.UpdateAsync(id, dto) ? NoContent() : NotFound();
+    [HttpDelete("{id:int}"), Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(int id) => await service.DeleteAsync(id) ? NoContent() : NotFound();
 }

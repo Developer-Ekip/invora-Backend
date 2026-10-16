@@ -9,27 +9,32 @@ namespace Invora.FieldOps.Api.Services;
 public class IssueService : IIssueService
 {
     private readonly AppDbContext _context;
+    private readonly CurrentUser _user;
 
-    public IssueService(AppDbContext context)
+    public IssueService(AppDbContext context, CurrentUser user)
     {
         _context = context;
+        _user = user;
     }
+
+    private IQueryable<Issue> Visible() => _context.Issues
+        .Where(x => _user.IsAdmin || x.Visit!.AssignedUserId == _user.Id);
 
     public async Task<List<Issue>> GetAllAsync()
     {
-        return await _context.Issues.ToListAsync();
+        return await Visible().AsNoTracking().OrderBy(x => x.Id).ToListAsync();
     }
 
     public async Task<Issue?> GetByIdAsync(int id)
     {
-        return await _context.Issues.FindAsync(id);
+        return await Visible().FirstOrDefaultAsync(x => x.Id == id);
     }
 
     public async Task<Issue?> CreateAsync(CreateIssueDto dto)
     {
         // Check if the related visit exists
         var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == dto.VisitId);
+            .AnyAsync(v => v.Id == dto.VisitId && (_user.IsAdmin || v.AssignedUserId == _user.Id));
 
         if (!visitExists)
             return null;
@@ -50,14 +55,14 @@ public class IssueService : IIssueService
 
     public async Task<bool> UpdateAsync(int id, UpdateIssueDto dto)
     {
-        var issue = await _context.Issues.FindAsync(id);
+        var issue = await Visible().FirstOrDefaultAsync(x => x.Id == id);
 
         if (issue == null)
             return false;
 
         // Check if the related visit exists
         var visitExists = await _context.Visits
-            .AnyAsync(v => v.Id == dto.VisitId);
+            .AnyAsync(v => v.Id == dto.VisitId && (_user.IsAdmin || v.AssignedUserId == _user.Id));
 
         if (!visitExists)
             return false;
@@ -74,7 +79,7 @@ public class IssueService : IIssueService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var issue = await _context.Issues.FindAsync(id);
+        var issue = await Visible().FirstOrDefaultAsync(x => x.Id == id);
 
         if (issue == null)
             return false;

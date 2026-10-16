@@ -8,6 +8,10 @@ public class Visit
 
     public Site? Site { get; set; }
 
+    public int? AssignedUserId { get; set; }
+
+    public User? AssignedUser { get; set; }
+
     public DateTime VisitDate { get; set; }
 
     public string Status { get; set; } = "Planned";

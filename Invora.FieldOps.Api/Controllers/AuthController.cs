@@ -28,7 +28,7 @@ public AuthController(
         var user = await _authService.RegisterAsync(dto);
 
         if (user == null)
-            return Conflict("Username already exists.");
+            return Problem(statusCode: 409, title: "Username already exists.");
 
         return StatusCode(201, new
         {
@@ -39,7 +39,7 @@ public AuthController(
     }
 
     // Validate user credentials
-   
+
     // Validate credentials and generate a JWT token
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto)
@@ -47,7 +47,7 @@ public AuthController(
         var user = await _authService.LoginAsync(dto);
 
         if (user == null)
-            return Unauthorized("Invalid username or password.");
+            return Problem(statusCode: 401, title: "Invalid username or password.");
 
         var token = _jwtTokenService.GenerateToken(user);
 

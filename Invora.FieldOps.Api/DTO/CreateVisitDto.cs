@@ -7,10 +7,13 @@ public class CreateVisitDto
     [Range(1, int.MaxValue)]
     public int SiteId { get; set; }
 
-    [Required]
+    [Range(1, int.MaxValue)]
+    public int? AssignedUserId { get; set; }
+
+    [Range(typeof(DateTime), "2000-01-01", "2100-01-01")]
     public DateTime VisitDate { get; set; }
 
     [Required]
-    [StringLength(50)]
+    [RegularExpression("^(Planned|InProgress|Completed|Cancelled)$")]
     public string Status { get; set; } = "Planned";
 }

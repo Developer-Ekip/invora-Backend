@@ -11,7 +11,7 @@ public class AppDbContext : DbContext
     {
     }
 
-    //EF Core´a veritabaninda tablo olarak yönetme: 
+    //EF Core´a veritabaninda tablo olarak yönetme:
     public DbSet<Company> Companies { get; set; } //companies tablosu
 
     public DbSet<Site> Sites { get; set; } //site tablosu
@@ -27,6 +27,10 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<User>().HasIndex(u => u.Username).IsUnique();
+        modelBuilder.Entity<Visit>().HasOne(v => v.AssignedUser)
+            .WithMany().HasForeignKey(v => v.AssignedUserId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Company>()
             .HasMany(c => c.Sites) //bir company -> birden cok site

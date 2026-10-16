@@ -143,6 +143,9 @@ namespace Invora.FieldOps.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Username")
+                        .IsUnique();
+
                     b.ToTable("Users");
                 });
 
@@ -153,6 +156,9 @@ namespace Invora.FieldOps.Api.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedUserId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("SiteId")
                         .HasColumnType("integer");
@@ -165,6 +171,8 @@ namespace Invora.FieldOps.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssignedUserId");
 
                     b.HasIndex("SiteId");
 
@@ -206,11 +214,18 @@ namespace Invora.FieldOps.Api.Migrations
 
             modelBuilder.Entity("Invora.FieldOps.Api.Models.Visit", b =>
                 {
+                    b.HasOne("Invora.FieldOps.Api.Models.User", "AssignedUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Invora.FieldOps.Api.Models.Site", "Site")
                         .WithMany()
                         .HasForeignKey("SiteId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AssignedUser");
 
                     b.Navigation("Site");
                 });

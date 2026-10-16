@@ -8,7 +8,7 @@ namespace Invora.FieldOps.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "Admin,FieldUser")]
 
 public class FieldTasksController : ControllerBase
 {
@@ -21,38 +21,38 @@ public class FieldTasksController : ControllerBase
 
     // GET: Get all tasks
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<FieldTask>>> GetAll()
+    public async Task<ActionResult<IEnumerable<FieldTaskResponseDto>>> GetAll()
     {
         var tasks = await _fieldTaskService.GetAllAsync();
 
-        return Ok(tasks);
+        return Ok(tasks.Select(x => x.ToDto()));
     }
 
     // GET: Get a task by ID
     [HttpGet("{id}")]
-    public async Task<ActionResult<FieldTask>> GetById(int id)
+    public async Task<ActionResult<FieldTaskResponseDto>> GetById(int id)
     {
         var task = await _fieldTaskService.GetByIdAsync(id);
 
         if (task == null)
             return NotFound();
 
-        return Ok(task);
+        return Ok(task.ToDto());
     }
 
     // POST: Create a task linked to an existing visit
     [HttpPost]
-    public async Task<ActionResult<FieldTask>> Create(CreateFieldTaskDto dto)
+    public async Task<ActionResult<FieldTaskResponseDto>> Create(CreateFieldTaskDto dto)
     {
         var task = await _fieldTaskService.CreateAsync(dto);
 
         if (task == null)
-            return BadRequest("Visit does not exist.");
+            return Problem(statusCode: 400, title: "Invalid request", detail: "Visit does not exist.");
 
         return CreatedAtAction(
             nameof(GetById),
             new { id = task.Id },
-            task
+            task.ToDto()
         );
     }
 
@@ -63,7 +63,7 @@ public class FieldTasksController : ControllerBase
         var updated = await _fieldTaskService.UpdateAsync(id, updatedTask);
 
         if (!updated)
-            return BadRequest("Task does not exist or Visit is invalid.");
+            return Problem(statusCode: 400, title: "Invalid request", detail: "Task does not exist or Visit is invalid.");
 
         return NoContent();
     }

@@ -16,6 +16,6 @@ public class CreateFieldTaskDto
     public string Description { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(50)]
+    [RegularExpression("^(Pending|InProgress|Completed)$")]
     public string Status { get; set; } = "Pending";
 }
